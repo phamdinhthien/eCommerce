@@ -1,0 +1,22 @@
+@url_dev=http://localhost:3052/v1/api
+
+POST {{url_dev}}/shop/sign-up
+Content-Type: application/json
+x-api-key: 13603ce7ae8957dc3e4723942c199fd9d68ed4e4f3177452c359948272f37b40088149b7a151804479638be84d00ffe65f1df05a6b82c5f24244c0df669b9512
+
+{
+    "name": "Shop JS 02",
+    "email": "a@gmail06.com",
+    "password": "abc123"
+}
+
+###
+POST {{url_dev}}/shop/login
+Content-Type: application/json
+x-api-key: 13603ce7ae8957dc3e4723942c199fd9d68ed4e4f3177452c359948272f37b40088149b7a151804479638be84d00ffe65f1df05a6b82c5f24244c0df669b9512
+
+{
+    "name": "Shop JS 02",
+    "email": "a@gmail06.com",
+    "password": "abc123"
+}
