@@ -13,7 +13,44 @@ const RoleShop = {
     ADMIN: 'ADMIN'
 }
 
-const genToken = async(shop) => {
+getPublicKey = async(userid) => {
+    const filter = {user: userid};
+    const token = await keytokenModel.findOne(filter);
+    return token.publicKey;
+}
+
+validateToken = async(accessToken, userID) => {
+    // Lấy publicKey trong DB
+    const publicKeyString = getPublicKey(userID);
+    // Convert publicKey từ dạng string về dạng rsa có thể đọc được
+    const publicKeyObject = crypto.createPublicKey(publicKeyString);
+    // xác thực accessToken sử dụng publicKey
+    jwt.verify(accessToken, publicKeyObject, (err, decode) => {
+        if(err) {
+            console.error('error verify token');
+        } else{
+            console.log('decode jwt::', decode);
+        }
+    });
+}
+
+const createKeyToken = async({userid, publicKey, refreshToken}) => {
+        const publicKeyString = publicKey.toString();
+        const filter = {user: userid};
+        const update = {user: userid, publicKey: publicKeyString};
+        const options = {upsert: true, new: true};
+        await keytokenModel.findOneAndUpdate(filter, update, options);
+}
+
+const createAccessToken = async (payload, privateKey) => {
+    const accessToken = await jwt.sign(payload, privateKey, {
+        algorithm: 'RS256',
+        expiresIn: '2 days'
+    });
+    return accessToken;
+}
+
+const genToken = async(userInfo) => {
     const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
         modulusLength: 4096,
         publicKeyEncoding: {
@@ -25,20 +62,11 @@ const genToken = async(shop) => {
             format: 'pem'
         }
     })
-
-    const publicKeyString = await KeyTokenService.createKeyToken({
-        userid: shop._id,
-        publicKey
-    })
-    if (!publicKeyString) {
-        return {
-            code: 'xxx',
-            message: 'publicKeyString error'
-        }
-    }
-    const publicKeyObject = crypto.createPublicKey(publicKeyString);
-    const tokens = await createTokenPair({ userid: shop._id, email: shop.email }, publicKeyObject, privateKey);
-    return tokens;
+    // Lưu userid và publicKey vào bảng KeyToken
+    createKeyToken({ userid: userInfo._id, publicKey })
+    // tạo accessToken với privateKey
+    const accessToken = await createAccessToken({ userid: userInfo._id, email: userInfo.email }, privateKey);
+    return accessToken;
 }
 
 class AccessService {

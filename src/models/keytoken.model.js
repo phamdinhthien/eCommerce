@@ -13,14 +13,6 @@ var keyTokenSchema = new Schema({
     publicKey: {
         type: String,
         require: true
-    },
-    refreshTokenUsed: {
-        type: Array,
-        default: []
-    },
-    refreshToken: {
-        type: String,
-        require: true
     }
 }, {
     timestamps: true,
