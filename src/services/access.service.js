@@ -6,6 +6,8 @@ const { createTokenPair } = require('../auth/authUtils');
 const { getInfoData } = require('../utils');
 const { BadRequestError, AuthFailureError } = require('../core/error.response');
 const { findByEmail } = require('./shop.service');
+const keytokenModel = require("../models/keytoken.model");
+
 const RoleShop = {
     SHOP: 'SHOP',
     WRITER: 'WRITER',
@@ -43,10 +45,7 @@ const createKeyToken = async({userid, publicKey, refreshToken}) => {
 }
 
 const createAccessToken = async (payload, privateKey) => {
-    const accessToken = await jwt.sign(payload, privateKey, {
-        algorithm: 'RS256',
-        expiresIn: '2 days'
-    });
+    const { accessToken } = await createTokenPair(payload, privateKey)
     return accessToken;
 }
 
@@ -71,13 +70,19 @@ const genToken = async(userInfo) => {
 
 class AccessService {
 
+    static logout = async(keyStore) => {
+        console.log('keyStore')
+        const delKey = await KeyTokenService.removeKeyById(keyStore._id);
+        console.log(delKey);
+        return delKey;
+    }
     /**
      * login
      */
     static login = async({email, password, refreshToken = null}) => {
         const foundShop = await findByEmail(email);
         if(!foundShop) throw new BadRequestError('Shop not registered');
-        const match = bcrypt.compare(password, foundShop.password);
+        const match = await bcrypt.compare(password, foundShop.password);
         if(!match) throw new AuthFailureError('Authen error');
         const tokens = await genToken(foundShop);
         await KeyTokenService.createKeyToken({
@@ -100,17 +105,17 @@ class AccessService {
         if (checkExistShop) {
             throw new BadRequestError('Error: Shop exists');
         }
-        // const passwordHash = await bcrypt.hash(password, 10);
-        // const newShop = await shopModel.create({
-        //     name, email, password: passwordHash, roles: [RoleShop.SHOP]
-        // })
-        // if (newShop) {
-        //     const tokens = genToken(newShop);
-        //     return {
-        //         shop: getInfoData({ field: ["_id", "name", "email"], object: newShop }),
-        //         tokens
-        //     }
-        // }
+        const passwordHash = await bcrypt.hash(password, 10);
+        const newShop = await shopModel.create({
+            name, email, password: passwordHash, roles: [RoleShop.SHOP]
+        })
+        if (newShop) {
+            const tokens = genToken(newShop);
+            return {
+                shop: getInfoData({ field: ["_id", "name", "email"], object: newShop }),
+                tokens
+            }
+        }
         return {
             code: 200,
             newdata: null
